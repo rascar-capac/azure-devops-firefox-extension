@@ -28,8 +28,11 @@ async function connect() {
 
     console.log(`Attempting to connect a websocket to ${relayUrl}.`);
 
-    socket.onopen = () => {
+    socket.onopen = async () => {
         console.log(`Websocket connected.`);
+        await browser.storage.local.set({
+            connected: true
+        });
     };
 
     socket.onmessage = event => {
@@ -37,8 +40,11 @@ async function connect() {
         handleNotification(message);
     };
 
-    socket.onclose = e => {
+    socket.onclose = async (e) => {
         console.log("Websocket closed.", e);
+        await browser.storage.local.set({
+            connected: false
+        });
     };
 
     socket.onerror = e => {
@@ -85,4 +91,5 @@ function handleNotification(message) {
 
 connect();
 
+//find better solution to react to changes in popup.js
 browser.storage.onChanged.addListener(connect);
