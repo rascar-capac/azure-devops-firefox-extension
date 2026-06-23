@@ -1,0 +1,24 @@
+{
+    "manifest_version": 3,
+    "name": "Azure DevOps Notifications",
+    "version": "1.0.0",
+    "permissions": [
+        "notifications",
+        "storage"
+    ],
+    "host_permissions": [
+        "http://localhost:3000",
+        "ws://localhost:3000"
+    ],
+    "content_security_policy": {
+        "extension_pages": "script-src 'self' http://localhost:3000"
+    },
+    "background": {
+        "scripts": [
+            "background.js"
+        ]
+    },
+    "action": {
+        "default_popup": "popup.html"
+    }
+}
