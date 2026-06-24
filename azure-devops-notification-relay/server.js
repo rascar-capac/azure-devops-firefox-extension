@@ -65,9 +65,8 @@ app.post("/test", (req, res) => {
     broadcast({
         eventType: "ms.vss-code.git-pullrequest-comment-event",
         payload: {
-            title: "Feature/Login",
-            author: "Jean Dupont",
-            comment: "Peux-tu vérifier ce point ?"
+            description: "This is a description.",
+            url: "https://www.google.com/"
         }
     });
 

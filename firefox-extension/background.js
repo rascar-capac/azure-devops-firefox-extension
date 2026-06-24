@@ -1,19 +1,50 @@
 let socket;
-let relayUrl;
+const relayUrl = "ws://localhost:3000";
+
+async function getNotifications() {
+
+    const result = await browser.storage.local.get("notifications");
+
+    return result.notifications ?? [];
+}
+
+async function updateNotificationList(notifications) {
+
+    await browser.storage.local.set({ notifications });
+
+    updateBadge(notifications.length);
+}
+
+function updateBadge(count) {
+
+    browser.action.setBadgeText({ text: count > 0 ? count.toString() : "" });
+    browser.action.setBadgeBackgroundColor({ color: "#ff0000" });
+}
+
+async function addNotification(notification) {
+
+    const notifications = await getNotifications();
+
+    notifications.unshift(notification);
+
+    await updateNotificationList(notifications);
+
+    browser.notifications.create({
+        title: notification.title,
+        message: notification.description
+    });
+}
+
+async function removeNotification(id) {
+
+    const notifications = await getNotifications();
+
+    const filtered = notifications.filter(n => n.id !== id);
+
+    await updateNotificationList(filtered);
+}
 
 async function connect() {
-
-    const data = await browser.storage.local.get("relayUrl");
-
-    if (!data.relayUrl) {
-        return;
-    }
-
-    if (data.relayUrl === relayUrl) {
-        return;
-    }
-
-    relayUrl = data.relayUrl;
 
     if (socket) {
 
@@ -35,9 +66,9 @@ async function connect() {
         });
     };
 
-    socket.onmessage = event => {
-        const message = JSON.parse(event.data);
-        handleNotification(message);
+    socket.onmessage = rawEvent => {
+        const event = JSON.parse(rawEvent.data);
+        handleNotification(event);
     };
 
     socket.onclose = async (e) => {
@@ -54,42 +85,61 @@ async function connect() {
     };
 }
 
-function handleNotification(message) {
+async function handleNotification(event) {
 
-    const type = message.eventType || "unknown";
-    let title = "Azure DevOps";
-    let body = "New event";
+    const notification = {
+        id: crypto.randomUUID(),
+        title: getTitleFromType(event.eventType) ?? "Notification",
+        description: event.payload?.description ?? "New event",
+        url: event.payload?.url ?? "",
+        createdAt: Date.now()
+    }
+
+    await addNotification(notification);
+}
+
+function getTitleFromType(type) {
 
     switch (type) {
         case "ms.vss-code.git-pullrequest-comment-event":
-            title = "Pull Request";
-            body = "New comment";
-            break;
+            return "New Pull Request comment";
 
         case "git.pullrequest.created":
-            title = "Pull Request";
-            body = "New pull request";
-            break;
+            return "New Pull Request"
 
         case "workitem.updated":
-            title = "Work Item";
-            body = "Work item updated";
-            break;
+            return "Work item updated";
 
         case "build.complete":
-            title = "Build";
-            body = "Build completed";
-            break;
-    }
+            return "Build completed";
 
-    browser.notifications.create({
-        type: "basic",
-        title,
-        message: body
+        default:
+            return type;
+    }
+}
+
+async function start() {
+
+    const notifications = await getNotifications();
+
+    updateBadge(notifications.length);
+
+    connect();
+
+    browser.runtime.onMessage.addListener(async message => {
+        switch (message.type) {
+
+            case "GetNotifications":
+
+                return getNotifications();
+
+            case "RemoveNotification":
+
+                await removeNotification(message.id);
+
+                return;
+        }
     });
 }
 
-connect();
-
-//find better solution to react to changes in popup.js
-browser.storage.onChanged.addListener(connect);
+start();

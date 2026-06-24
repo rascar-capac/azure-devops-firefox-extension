@@ -4,7 +4,8 @@
     "version": "1.0.0",
     "permissions": [
         "notifications",
-        "storage"
+        "storage",
+        "tabs"
     ],
     "host_permissions": [
         "http://localhost:3000",
